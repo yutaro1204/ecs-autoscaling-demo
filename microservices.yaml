@@ -1,0 +1,320 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  ECSAMI:
+    Description: 'AMI ID'
+    Type: String
+    Default: 'ami-0471ea40c46b4325d'
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: '192.168.0.0/16'
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      InstanceTenancy: 'default'
+      Tags:
+        -
+          Key: 'VPC-Name'
+          Value: 'VPC-for-EC2-AutoScaling'
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        -
+          Key: 'IGW-Name'
+          Value: 'IGW-for-EC2-AutoScaling'
+  IGWAttacher:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+    DependsOn:
+      - VPC
+      - InternetGateway
+  SubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: '192.168.0.0/20'
+      AvailabilityZone: 'ap-northeast-1a'
+      Tags:
+        -
+          Key: 'Subnet-Name'
+          Value: 'SubnetA-for-EC2-AutoScaling'
+    DependsOn:
+      - VPC
+  SubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: '192.168.16.0/20'
+      AvailabilityZone: 'ap-northeast-1a'
+      Tags:
+        -
+          Key: 'Subnet-Name'
+          Value: 'SubnetB-for-EC2-AutoScaling'
+    DependsOn:
+      - VPC
+  SubnetC:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: '192.168.32.0/20'
+      AvailabilityZone: 'ap-northeast-1c'
+      Tags:
+        -
+          Key: 'Subnet-Name'
+          Value: 'SubnetC-for-EC2-AutoScaling'
+    DependsOn:
+      - VPC
+  SubnetD:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: '192.168.64.0/20'
+      AvailabilityZone: 'ap-northeast-1c'
+      Tags:
+        -
+          Key: 'Subnet-Name'
+          Value: 'SubnetD-for-EC2-AutoScaling'
+    DependsOn:
+      - VPC
+  RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        -
+          Key: 'RouteTable-Name'
+          Value: 'RouteTable-for-EC2-AutoScaling'
+    DependsOn:
+      - VPC
+  SubnetAttacherA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTable
+      SubnetId: !Ref SubnetA
+    DependsOn:
+      - RouteTable
+      - SubnetA
+  SubnetAttacherB:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTable
+      SubnetId: !Ref SubnetB
+    DependsOn:
+      - RouteTable
+      - SubnetB
+  SubnetAttacherC:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTable
+      SubnetId: !Ref SubnetC
+    DependsOn:
+      - RouteTable
+      - SubnetC
+  SubnetAttacherD:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTable
+      SubnetId: !Ref SubnetD
+    DependsOn:
+      - RouteTable
+      - SubnetD
+  RouteAttacher:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref RouteTable
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !Ref InternetGateway
+    DependsOn:
+      - RouteTable
+      - InternetGateway
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: 'SampleSecurityGroup'
+      GroupName: 'sampleSecurityGroup'
+      SecurityGroupEgress:
+        -
+          IpProtocol: -1
+          FromPort: -1
+          ToPort: -1
+          CidrIp: '0.0.0.0/0'
+        -
+          IpProtocol: -1
+          FromPort: -1
+          ToPort: -1
+          CidrIpv6: '::/0'
+      SecurityGroupIngress:
+        -
+          IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: '0.0.0.0/0'
+        -
+          IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIpv6: '::/0'
+        -
+          IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: '0.0.0.0/0'
+        -
+          IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIpv6: '::/0'
+      VpcId: !Ref VPC
+      Tags:
+        -
+          Key: 'SecurityGroup-Name'
+          Value: 'SecurityGroup-for-EC2-AutoScaling'
+    DependsOn:
+      - VPC
+
+  EC2AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: 'SapmleAutoScaling'
+      AvailabilityZones:
+        - 'ap-northeast-1a'
+        - 'ap-northeast-1c'
+      DesiredCapacity: '2'
+      LaunchConfigurationName: 'SampleLaunchConfiguration'
+      MaxSize: '4'
+      MetricsCollection:
+        - Granularity: '1Minute'
+          Metrics:
+            - 'GroupMinSize'
+            - 'GroupMaxSize'
+            - 'GroupDesiredCapacity'
+            - 'GroupInServiceInstances'
+            - 'GroupPendingInstances'
+            - 'GroupStandbyInstances'
+            - 'GroupTerminatingInstances'
+            - 'GroupTotalInstances'
+      MinSize: '1'
+      Tags:
+        - Key: 'AutoScalingGroup-Name'
+          Value: 'SampleAutoScaling'
+          PropagateAtLaunch: "false"
+      VPCZoneIdentifier:
+        - !Ref SubnetA
+        - !Ref SubnetB
+        - !Ref SubnetC
+        - !Ref SubnetD
+    DependsOn:
+      - LaunchConfiguration
+      - SubnetA
+      - SubnetB
+      - SubnetC
+      - SubnetD
+  LaunchConfiguration:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      AssociatePublicIpAddress: true
+      IamInstanceProfile: !Ref InstanceProfile
+      ImageId: !Ref ECSAMI
+      InstanceType: 't2.micro'
+      KeyName: 'SampleLaunchConfiguration'
+      LaunchConfigurationName: 'SampleLaunchConfiguration'
+      SecurityGroups:
+        - !Ref SecurityGroup
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -xe
+          sudo echo ECS_CLUSTER=${ECSCluster} >> /etc/ecs/ecs.config
+          sudo yum install -y aws-cfn-bootstrap
+          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource ECSAutoScalingGroup --region ${AWS::Region}
+    DependsOn:
+      - InstanceProfile
+      - SecurityGroup
+      - ECSCluster
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+        - !Ref InstanceProfileRole
+    DependsOn:
+      - InstanceProfileRole
+  InstanceProfileRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: 'Allow'
+          Principal:
+            Service: 'ec2.amazonaws.com'
+          Action: 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: 'ecs-service'
+          PolicyDocument:
+            Statement:
+            - Effect: 'Allow'
+              Action:
+                - 'ecs:CreateCluster'
+                - 'ecs:DeregisterContainerInstance'
+                - 'ecs:DiscoverPollEndpoint'
+                - 'ecs:Poll'
+                - 'ecs:RegisterContainerInstance'
+                - 'ecs:StartTelemetrySession'
+                - 'ecs:Submit*'
+                - 'logs:CreateLogStream'
+                - 'logs:PutLogEvents'
+                - 'ecr:GetAuthorizationToken'
+                - 'ecr:BatchGetImage'
+                - 'ecr:GetDownloadUrlForLayer'
+              Resource: '*'
+
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: 'SampleECSCluster'
+      Tags:
+        - Key: 'ECSCluster-Name'
+          Value: 'ECSCluster-for-EC2-AutoScaling'
+
+  ECSService:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: !GetAtt ECSCluster.Arn
+      DesiredCount: 2
+      PlacementStrategies:
+        - Field: 'instanceId'
+          Type: 'spread'
+        - Field: 'attribute:ecs.availability-zone'
+          Type: 'spread'
+      SchedulingStrategy: 'REPLICA'
+      ServiceName: 'SampleECSService'
+      Tags:
+        - Key: 'ECSService-Name'
+          Value: 'ECSService-for-EC2-AutoScaling'
+      TaskDefinition: !Ref ECSTaskDefinition
+    DependsOn:
+      - EC2AutoScalingGroup
+      - ECSCluster
+      - ECSTaskDefinition
+
+  ECSTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Essential: true
+          Image: '915217444612.dkr.ecr.ap-northeast-1.amazonaws.com/sample_repository:latest'
+          Name: 'SampleContainer'
+          PortMappings:
+            - ContainerPort: 80
+              HostPort: 80
+              Protocol: 'tcp'
+      Family: 'SampleTaskDefinition'
+      Memory: '512'
+      Tags:
+        - Key: 'ECSTaskDefinition-Name'
+          Value: 'ECSTaskDefinition-for-EC2-AutoScaling'
