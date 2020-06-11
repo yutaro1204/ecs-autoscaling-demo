@@ -5,8 +5,13 @@ Parameters:
     Description: 'AMI ID'
     Type: String
     Default: 'ami-0471ea40c46b4325d'
+    # ECS-optimized AMI in ap-northeast-1
+    # Refer to https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-optimized_AMI.html
 
 Resources:
+  #####################
+  # Network resources #
+  #####################
   VPC:
     Type: AWS::EC2::VPC
     Properties:
@@ -18,6 +23,7 @@ Resources:
         -
           Key: 'VPC-Name'
           Value: 'VPC-for-EC2-AutoScaling'
+
   InternetGateway:
     Type: AWS::EC2::InternetGateway
     Properties:
@@ -25,6 +31,7 @@ Resources:
         -
           Key: 'IGW-Name'
           Value: 'IGW-for-EC2-AutoScaling'
+
   IGWAttacher:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
@@ -33,6 +40,7 @@ Resources:
     DependsOn:
       - VPC
       - InternetGateway
+
   SubnetA:
     Type: AWS::EC2::Subnet
     Properties:
@@ -45,6 +53,7 @@ Resources:
           Value: 'SubnetA-for-EC2-AutoScaling'
     DependsOn:
       - VPC
+
   SubnetB:
     Type: AWS::EC2::Subnet
     Properties:
@@ -57,6 +66,7 @@ Resources:
           Value: 'SubnetB-for-EC2-AutoScaling'
     DependsOn:
       - VPC
+
   RouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -67,6 +77,7 @@ Resources:
           Value: 'RouteTable-for-EC2-AutoScaling'
     DependsOn:
       - VPC
+
   SubnetAttacherA:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -75,6 +86,7 @@ Resources:
     DependsOn:
       - RouteTable
       - SubnetA
+
   SubnetAttacherB:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -83,6 +95,7 @@ Resources:
     DependsOn:
       - RouteTable
       - SubnetB
+
   RouteAttacher:
     Type: AWS::EC2::Route
     Properties:
@@ -92,6 +105,7 @@ Resources:
     DependsOn:
       - RouteTable
       - InternetGateway
+
   SecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -137,8 +151,11 @@ Resources:
     DependsOn:
       - VPC
 
+
+  ###########################
+  # LoadBalancing resources #
+  ###########################
   ALBTargetGroup:
-    # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-targetgroup.html
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       Name: 'SampleTargetGroup'
@@ -164,7 +181,6 @@ Resources:
           TargetGroupArn: !Ref ALBTargetGroup
 
   ApplicationLoadBalancer:
-    # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-loadbalancer.html
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
       Name: 'SampleLoadBalancer'
@@ -183,7 +199,11 @@ Resources:
       - SubnetA
       - SubnetB
 
-  EC2AutoScalingGroup:
+
+  #########################
+  # AutoScaling resources #
+  #########################
+  AutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
       AutoScalingGroupName: 'SapmleAutoScaling'
@@ -237,6 +257,7 @@ Resources:
       - InstanceProfile
       - SecurityGroup
       - ECSCluster
+
   InstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
@@ -245,6 +266,7 @@ Resources:
         - !Ref InstanceProfileRole
     DependsOn:
       - InstanceProfileRole
+
   InstanceProfileRole:
     Type: AWS::IAM::Role
     Properties:
@@ -275,6 +297,10 @@ Resources:
                 - 'ecr:GetDownloadUrlForLayer'
               Resource: '*'
 
+
+  #################
+  # ECS resources #
+  #################
   ECSCluster:
     Type: AWS::ECS::Cluster
     Properties:
@@ -304,7 +330,7 @@ Resources:
           Value: 'ECSService-for-EC2-AutoScaling'
       TaskDefinition: !Ref ECSTaskDefinition
     DependsOn:
-      - EC2AutoScalingGroup
+      - AutoScalingGroup
       - ECSCluster
       - ECSTaskDefinition
 
