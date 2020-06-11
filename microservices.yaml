@@ -50,35 +50,11 @@ Resources:
     Properties:
       VpcId: !Ref VPC
       CidrBlock: '192.168.16.0/20'
-      AvailabilityZone: 'ap-northeast-1a'
+      AvailabilityZone: 'ap-northeast-1c'
       Tags:
         -
           Key: 'Subnet-Name'
           Value: 'SubnetB-for-EC2-AutoScaling'
-    DependsOn:
-      - VPC
-  SubnetC:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref VPC
-      CidrBlock: '192.168.32.0/20'
-      AvailabilityZone: 'ap-northeast-1c'
-      Tags:
-        -
-          Key: 'Subnet-Name'
-          Value: 'SubnetC-for-EC2-AutoScaling'
-    DependsOn:
-      - VPC
-  SubnetD:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref VPC
-      CidrBlock: '192.168.64.0/20'
-      AvailabilityZone: 'ap-northeast-1c'
-      Tags:
-        -
-          Key: 'Subnet-Name'
-          Value: 'SubnetD-for-EC2-AutoScaling'
     DependsOn:
       - VPC
   RouteTable:
@@ -107,22 +83,6 @@ Resources:
     DependsOn:
       - RouteTable
       - SubnetB
-  SubnetAttacherC:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref RouteTable
-      SubnetId: !Ref SubnetC
-    DependsOn:
-      - RouteTable
-      - SubnetC
-  SubnetAttacherD:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref RouteTable
-      SubnetId: !Ref SubnetD
-    DependsOn:
-      - RouteTable
-      - SubnetD
   RouteAttacher:
     Type: AWS::EC2::Route
     Properties:
@@ -177,6 +137,52 @@ Resources:
     DependsOn:
       - VPC
 
+  ALBTargetGroup:
+    # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-targetgroup.html
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: 'SampleTargetGroup'
+      Port: 80
+      Protocol: 'HTTP'
+      VpcId: !Ref VPC
+      HealthCheckPath: '/healthcheck.php'
+      Tags:
+        -
+          Key: 'TargetGroup-Name'
+          Value: 'TargetGroup-for-EC2-AutoScaling'
+    DependsOn:
+      - VPC
+
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: 'HTTP'
+      DefaultActions:
+        - Type: 'forward'
+          TargetGroupArn: !Ref ALBTargetGroup
+
+  ApplicationLoadBalancer:
+    # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-loadbalancer.html
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: 'SampleLoadBalancer'
+      IpAddressType: 'ipv4'
+      SubnetMappings:
+        - SubnetId: !Ref SubnetA
+        - SubnetId: !Ref SubnetB
+      SecurityGroups:
+        - !Ref SecurityGroup
+      Tags:
+        - Key: 'ALB-Name'
+          Value: 'ALB-for-EC2-AutoScaling'
+      Type: 'application'
+    DependsOn:
+      - SecurityGroup
+      - SubnetA
+      - SubnetB
+
   EC2AutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
@@ -206,18 +212,14 @@ Resources:
       VPCZoneIdentifier:
         - !Ref SubnetA
         - !Ref SubnetB
-        - !Ref SubnetC
-        - !Ref SubnetD
     DependsOn:
       - LaunchConfiguration
       - SubnetA
       - SubnetB
-      - SubnetC
-      - SubnetD
+
   LaunchConfiguration:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
-      AssociatePublicIpAddress: true
       IamInstanceProfile: !Ref InstanceProfile
       ImageId: !Ref ECSAMI
       InstanceType: 't2.micro'
@@ -286,6 +288,10 @@ Resources:
     Properties:
       Cluster: !GetAtt ECSCluster.Arn
       DesiredCount: 2
+      LoadBalancers:
+        - ContainerName: 'SampleContainer'
+          ContainerPort: 80
+          TargetGroupArn: !Ref ALBTargetGroup
       PlacementStrategies:
         - Field: 'instanceId'
           Type: 'spread'
@@ -307,7 +313,7 @@ Resources:
     Properties:
       ContainerDefinitions:
         - Essential: true
-          Image: '000000000000.dkr.ecr.ap-northeast-1.amazonaws.com/sample_repository:latest'
+          Image: '915217444612.dkr.ecr.ap-northeast-1.amazonaws.com/ecr_repository_name:latest'
           Name: 'SampleContainer'
           PortMappings:
             - ContainerPort: 80
