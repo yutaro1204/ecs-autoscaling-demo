@@ -313,7 +313,7 @@ Resources:
     Properties:
       ContainerDefinitions:
         - Essential: true
-          Image: '915217444612.dkr.ecr.ap-northeast-1.amazonaws.com/ecr_repository_name:latest'
+          Image: '000000000000.dkr.ecr.ap-northeast-1.amazonaws.com/ecr_repository_name:latest'
           Name: 'SampleContainer'
           PortMappings:
             - ContainerPort: 80
