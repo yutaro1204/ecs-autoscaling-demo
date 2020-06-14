@@ -179,6 +179,9 @@ Resources:
       DefaultActions:
         - Type: 'forward'
           TargetGroupArn: !Ref ALBTargetGroup
+    DependsOn:
+      - ApplicationLoadBalancer
+      - ALBTargetGroup
 
   ApplicationLoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
@@ -228,7 +231,7 @@ Resources:
       Tags:
         - Key: 'AutoScalingGroup-Name'
           Value: 'SampleAutoScaling'
-          PropagateAtLaunch: "false"
+          PropagateAtLaunch: 'false'
       VPCZoneIdentifier:
         - !Ref SubnetA
         - !Ref SubnetB
@@ -240,6 +243,7 @@ Resources:
   LaunchConfiguration:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
+      AssociatePublicIpAddress: true
       IamInstanceProfile: !Ref InstanceProfile
       ImageId: !Ref ECSAMI
       InstanceType: 't2.micro'
@@ -283,6 +287,7 @@ Resources:
             Statement:
             - Effect: 'Allow'
               Action:
+                - 'ec2:DescribeTags'
                 - 'ecs:CreateCluster'
                 - 'ecs:DeregisterContainerInstance'
                 - 'ecs:DiscoverPollEndpoint'
@@ -295,6 +300,8 @@ Resources:
                 - 'ecr:GetAuthorizationToken'
                 - 'ecr:BatchGetImage'
                 - 'ecr:GetDownloadUrlForLayer'
+                - 'ecs:UpdateContainerInstancesState'
+                - 'ecr:BatchCheckLayerAvailability'
               Resource: '*'
 
 
@@ -333,6 +340,7 @@ Resources:
       - AutoScalingGroup
       - ECSCluster
       - ECSTaskDefinition
+      - ALBListener
 
   ECSTaskDefinition:
     Type: AWS::ECS::TaskDefinition
