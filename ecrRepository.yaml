@@ -4,13 +4,13 @@ Parameters:
   RepositoryName:
     Default: 'ecr_repository_name'
     Type: String
+
 Resources:
-  # AWS::ECR::Repository
-  # https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-ecr-repository.html#cfn-ecr-repository-repositorypolicytext
   ContainerRepository:
     Type: AWS::ECR::Repository
     Properties:
       RepositoryName: !Ref RepositoryName
+
 Outputs:
   ECRRepositoryArn:
     Value: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ContainerRepository}'

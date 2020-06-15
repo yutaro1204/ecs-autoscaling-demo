@@ -29,7 +29,7 @@ Then the image will be pushed to the ECR repository.
 
 ## Create ECS Cluster, TaskDefinition, and Service with AutoScaling EC2 containers
 
-`ECRRepositoryArn`, the output of sampleECRRepository, is needed to be set ContainerDefinitions.ContainerDefinitions.Image in microservices.yaml like below.
+`ECRRepositoryArn`, the output of sampleECRRepository, is needed to be set as ContainerDefinitions.ContainerDefinitions.Image in microservices.yaml like below.
 ```yaml
 ECSTaskDefinition:
   Type: AWS::ECS::TaskDefinition

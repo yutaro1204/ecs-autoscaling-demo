@@ -288,6 +288,10 @@ Resources:
             - Effect: 'Allow'
               Action:
                 - 'ec2:DescribeTags'
+                - 'ecr:BatchCheckLayerAvailability'
+                - 'ecr:BatchGetImage'
+                - 'ecr:GetAuthorizationToken'
+                - 'ecr:GetDownloadUrlForLayer'
                 - 'ecs:CreateCluster'
                 - 'ecs:DeregisterContainerInstance'
                 - 'ecs:DiscoverPollEndpoint'
@@ -295,13 +299,9 @@ Resources:
                 - 'ecs:RegisterContainerInstance'
                 - 'ecs:StartTelemetrySession'
                 - 'ecs:Submit*'
+                - 'ecs:UpdateContainerInstancesState'
                 - 'logs:CreateLogStream'
                 - 'logs:PutLogEvents'
-                - 'ecr:GetAuthorizationToken'
-                - 'ecr:BatchGetImage'
-                - 'ecr:GetDownloadUrlForLayer'
-                - 'ecs:UpdateContainerInstancesState'
-                - 'ecr:BatchCheckLayerAvailability'
               Resource: '*'
 
 
